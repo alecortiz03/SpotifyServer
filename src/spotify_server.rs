@@ -1,3 +1,4 @@
+use tower_http::cors::{Any, CorsLayer};
 use axum::{
     extract::{Path, Query, State},
     response::{Html, Redirect},
@@ -35,15 +36,21 @@ pub async fn start_spotify_server() {
         access_token: Arc::new(Mutex::new(None)),
     };
 
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/connect", get(connect_page))
-        .route("/connect/{pin}", get(check_pin))
-        .route("/spotify/start", get(start_spotify_login))
-        .route("/spotify/callback", get(spotify_callback))
-        .route("/spotify/token", get(get_token))
-        .route("/spotify/logout", get(logout))
-        .with_state(state);
+   let cors = CorsLayer::new()
+    .allow_origin(Any)
+    .allow_methods(Any)
+    .allow_headers(Any);
+
+let app = Router::new()
+    .route("/", get(root))
+    .route("/connect", get(connect_page))
+    .route("/connect/{pin}", get(check_pin))
+    .route("/spotify/start", get(start_spotify_login))
+    .route("/spotify/callback", get(spotify_callback))
+    .route("/spotify/token", get(get_token))
+    .route("/spotify/logout", get(logout))
+    .layer(cors)
+    .with_state(state);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| "3000".to_string())
