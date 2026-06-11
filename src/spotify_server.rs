@@ -36,13 +36,14 @@ pub async fn start_spotify_server() {
     };
 
     let app = Router::new()
-    .route("/", get(root))
-    .route("/connect", get(connect_page))
-    .route("/connect/{pin}", get(check_pin))
-    .route("/spotify/callback", get(spotify_callback))
-    .route("/spotify/token", get(get_token))
-    .route("/spotify/logout", get(logout))
-    .with_state(state);
+        .route("/", get(root))
+        .route("/connect", get(connect_page))
+        .route("/connect/{pin}", get(check_pin))
+        .route("/spotify/start", get(start_spotify_login))
+        .route("/spotify/callback", get(spotify_callback))
+        .route("/spotify/token", get(get_token))
+        .route("/spotify/logout", get(logout))
+        .with_state(state);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| "3000".to_string())
@@ -95,11 +96,79 @@ async fn connect_page() -> Html<String> {
     )
 }
 
-async fn check_pin(Path(pin): Path<String>) -> Redirect {
+async fn check_pin(
+    Path(pin): Path<String>,
+    State(state): State<AppState>,
+) -> Html<String> {
     if pin != get_connect_pin() {
-        return Redirect::to("/connect");
+        return Html(
+            r#"
+            <html>
+            <body style="font-family: Arial; text-align: center; margin-top: 100px;">
+                <h1>Wrong PIN</h1>
+                <p>Please try again.</p>
+                <a href="/connect" style="font-size: 24px;">Back</a>
+            </body>
+            </html>
+            "#
+            .to_string(),
+        );
     }
 
+    let is_logged_in = state.access_token.lock().unwrap().is_some();
+
+    if is_logged_in {
+        Html(
+            r#"
+            <html>
+            <body style="font-family: Arial; text-align: center; margin-top: 100px;">
+                <h1>Spotify is already connected</h1>
+                <p>Click below to log out and allow another user to connect.</p>
+
+                <a href="/spotify/logout" style="
+                    display: inline-block;
+                    font-size: 24px;
+                    padding: 12px 24px;
+                    background: #d33;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 8px;
+                ">
+                    Log Out Spotify
+                </a>
+            </body>
+            </html>
+            "#
+            .to_string(),
+        )
+    } else {
+        Html(
+            r#"
+            <html>
+            <body style="font-family: Arial; text-align: center; margin-top: 100px;">
+                <h1>PIN Accepted</h1>
+                <p>No Spotify account is currently connected.</p>
+
+                <a href="/spotify/start" style="
+                    display: inline-block;
+                    font-size: 24px;
+                    padding: 12px 24px;
+                    background: #1DB954;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 8px;
+                ">
+                    Connect Spotify
+                </a>
+            </body>
+            </html>
+            "#
+            .to_string(),
+        )
+    }
+}
+
+async fn start_spotify_login() -> Redirect {
     let redirect_uri = format!("{}/spotify/callback", get_base_url());
 
     let scopes = [
@@ -189,8 +258,14 @@ async fn logout(State(state): State<AppState>) -> Html<String> {
 
     Html(
         r#"
-        <h1>Spotify Logged Out</h1>
-        <p>You can now connect a different Spotify account.</p>
+        <html>
+        <body style="font-family: Arial; text-align: center; margin-top: 100px;">
+            <h1>Spotify Logged Out</h1>
+            <p>You can now connect a different Spotify account.</p>
+
+            <a href="/connect" style="font-size: 24px;">Connect another account</a>
+        </body>
+        </html>
         "#
         .to_string(),
     )
