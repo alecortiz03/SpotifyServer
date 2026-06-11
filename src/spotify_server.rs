@@ -36,13 +36,13 @@ pub async fn start_spotify_server() {
     };
 
     let app = Router::new()
-        .route("/", get(root))
-        .route("/connect", get(connect_page))
-        .route("/connect/:pin", get(check_pin))
-        .route("/spotify/callback", get(spotify_callback))
-        .route("/spotify/token", get(get_token))
-        .route("/spotify/logout", get(logout))
-        .with_state(state);
+    .route("/", get(root))
+    .route("/connect", get(connect_page))
+    .route("/connect/{pin}", get(check_pin))
+    .route("/spotify/callback", get(spotify_callback))
+    .route("/spotify/token", get(get_token))
+    .route("/spotify/logout", get(logout))
+    .with_state(state);
 
     let port: u16 = std::env::var("PORT")
         .unwrap_or_else(|_| "3000".to_string())
